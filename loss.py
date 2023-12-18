@@ -1,3 +1,6 @@
+# Took help from below github repo to implement contrastive loss
+# https://github.com/huawei-noah/Efficient-Computing/tree/master/GPT4Image/
+
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -17,18 +20,6 @@ def build_mlp(in_dim=512, hidden_dim=2048, out_dim=1024, bn=True, GELU=False):
         layers.append(nn.ReLU(inplace=True))
     layers.append(nn.Linear(hidden_dim, out_dim))
     return nn.Sequential(*layers)
-
-# def concat_all_gather(tensor, rank=None, world_size=1):
-#     """
-#     rank=None means no gradient will be retained.
-#     Specify rank with a int to retain gradient on local rank.
-#     """
-#     tensors_gather = [torch.zeros_like(tensor) for _ in range(world_size)]
-#     torch.distributed.all_gather(tensors_gather, tensor, async_op=False)
-#     if rank is not None:
-#         tensors_gather[rank] = tensor  # retain gradients on local rank
-#     output = torch.cat(tensors_gather, dim=0)
-#     return output
 
 def ctrastive_loss(img_emb, text_emb, tau=0.05):
     # half of clip_loss ?
