@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
+from torchvision.transforms import functional
 from PIL import Image
 import itertools
 import random
@@ -47,8 +48,8 @@ class COCODataset(torch.utils.data.Dataset):
     def load_image(self, image_info_dict: dict):        
         image_filename = image_info_dict["file_name"]
         file_path = os.path.join(self.images_dir, image_filename)
-        img_arr = np.array(Image.open(file_path))
-        return img_arr
+        img = Image.open(file_path)
+        return img
     
     def __len__(self):
         return len(self.metadata_df)
@@ -62,10 +63,20 @@ class COCODataset(torch.utils.data.Dataset):
         labels = list(literal_eval(image_info_dict["labels"]))
         return labels
     
+    def crop_img(self, img):
+        height, width = img.size
+        if height < self.res_height or width < self.res_width:
+            raise AssertionError("Incompatible image")
+        
+        resized_img = functional.resize(img, (self.res_height, self.res_width))
+        resized_arr = np.array(resized_img)
+        return resized_arr
+    
     def __getitem__(self, idx):
         train_img_idx = self.convert_index(idx)
         image_info = self.load_image_info(train_img_idx)
-        img_arr = self.load_image(image_info)
+        img = self.load_image(image_info)
+        img_arr = self.crop_img(img)
         caption = self.load_caption(image_info)
         labels = self.load_label_catgories(image_info)
 
