@@ -1,0 +1,8 @@
+data_path: "/home/tbaweja/coco_dataset"
+metadata_path: "/home/tbaweja/wproj/metadata"
+metadata_file: "image_caption_metdata.csv"
+data_version: "2014"
+seed: 0
+n_classes: 2
+img_height: 256
+img_width: 256
