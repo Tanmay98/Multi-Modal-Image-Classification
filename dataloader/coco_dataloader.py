@@ -14,6 +14,7 @@ import random
 import yaml
 import os
 from ast import literal_eval
+import json
 
 default_config_file = "/home/tbaweja/wproj/dataloader/dataloader_config.yaml"
 
@@ -29,13 +30,32 @@ class COCODataset(torch.utils.data.Dataset):
         metadata_dir = self.config["metadata_path"]
         metadata_file_path = os.path.join(metadata_dir, self.config["metadata_file"])
         data_version = self.config["data_version"]
+        self.min_classes = self.config["min_classes"]
         self.metadata_df = pd.read_csv(metadata_file_path)
+        self._preprocess_metadata()
         self.data_dir = self.config["data_path"]
         
         self.images_dir = os.path.join(self.data_dir, f"{self.mode}{data_version}")
         self.res_height = self.config["img_height"]
         self.res_width = self.config["img_width"]
         self.caption_mode = self.config["caption_mode"]
+        self.metadata_df = self._limit_dataset()
+    
+    def _preprocess_metadata(self):
+
+        def convert_to_iter(str_rep: str):
+            try:
+                return literal_eval(str_rep)
+            except ValueError:
+                elements = str_rep.strip("{}").split(", ")
+                return set(elements)
+        
+        self.metadata_df["image_captions"] = self.metadata_df["image_captions"].apply(convert_to_iter)
+        self.metadata_df["labels"] = self.metadata_df["labels"].apply(convert_to_iter)
+    
+    def _limit_dataset(self):
+        metadata_subset = self.metadata_df[self.metadata_df["labels"].apply(lambda x: len(x) >= self.min_classes)]
+        return metadata_subset
     
     def convert_index(self, index: int):
         try:
@@ -62,7 +82,7 @@ class COCODataset(torch.utils.data.Dataset):
         return len(self.metadata_df)
     
     def load_caption(self, image_info_dict: dict):
-        captions = literal_eval(image_info_dict["image_captions"])
+        captions = image_info_dict["image_captions"]        
         captions = sorted(captions, key = lambda x: len(x))
         if self.caption_mode == "random":
             caption = random.choice(captions)
@@ -71,8 +91,8 @@ class COCODataset(torch.utils.data.Dataset):
         return caption
     
     def load_label_catgories(self, image_info_dict: dict):
-        labels = list(literal_eval(image_info_dict["labels"]))
-        return labels
+        labels = list(image_info_dict["labels"])
+        return labels[:self.min_classes]
     
     def crop_img(self, img):
         height, width = img.size
