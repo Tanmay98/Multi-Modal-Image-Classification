@@ -83,16 +83,24 @@ class COCODataset(torch.utils.data.Dataset):
         resized_arr = np.array(resized_img)
         return resized_arr
     
+    def preprocess_image(self, img_arr: np.ndarray):
+        mean = np.array([0.485, 0.456, 0.406])
+        std = np.array([0.229, 0.224, 0.225])
+        normalized_image_array = (img_arr / 255.0 - mean) / std
+        return normalized_image_array
+    
     def __getitem__(self, idx):
         train_img_idx = self.convert_index(idx)
         image_info = self.load_image_info(train_img_idx)
         img = self.load_image(image_info)
         img_arr = self.crop_img(img)
+        norm_img = self.preprocess_image(img_arr)
+        tensor_img = torch.tensor(norm_img).permute(2, 0, 1)
         caption = self.load_caption(image_info)
         labels = self.load_label_catgories(image_info)
 
         return {
-            "image": img_arr,
+            "image": tensor_img,
             "caption": caption,
             "labels": labels
         }
