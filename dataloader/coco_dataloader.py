@@ -1,3 +1,9 @@
+"""
+#TODO:
+-> Preprocessing
+-> Fix Random caption
+-> Fix variable length of list of labels
+"""
 import numpy as np
 import pandas as pd
 import torch
@@ -29,6 +35,7 @@ class COCODataset(torch.utils.data.Dataset):
         self.images_dir = os.path.join(self.data_dir, f"{self.mode}{data_version}")
         self.res_height = self.config["img_height"]
         self.res_width = self.config["img_width"]
+        self.caption_mode = self.config["caption_mode"]
     
     def convert_index(self, index: int):
         try:
@@ -56,8 +63,12 @@ class COCODataset(torch.utils.data.Dataset):
     
     def load_caption(self, image_info_dict: dict):
         captions = literal_eval(image_info_dict["image_captions"])
-        random_caption = random.choice(captions)
-        return random_caption
+        captions = sorted(captions, key = lambda x: len(x))
+        if self.caption_mode == "random":
+            caption = random.choice(captions)
+        elif self.caption_mode == "detailed":
+            caption = captions[-1]
+        return caption
     
     def load_label_catgories(self, image_info_dict: dict):
         labels = list(literal_eval(image_info_dict["labels"]))
