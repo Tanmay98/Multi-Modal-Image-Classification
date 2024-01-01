@@ -67,8 +67,7 @@ class COCODataset(torch.utils.data.Dataset):
 
     
     def load_image_info(self, image_idx: int):
-        image_subset_df = self.metadata_df[self.metadata_df["id"] == image_idx]
-        image_info_dict = image_subset_df.iloc[0].to_dict()
+        image_info_dict = self.metadata_df.iloc[image_idx].to_dict()        
         return image_info_dict
 
     
@@ -92,7 +91,7 @@ class COCODataset(torch.utils.data.Dataset):
     
     def load_label_catgories(self, image_info_dict: dict):
         labels = list(image_info_dict["labels"])
-        return labels[:self.min_classes]
+        return np.array(labels[:self.min_classes])
     
     def crop_img(self, img):
         height, width = img.size
@@ -110,8 +109,8 @@ class COCODataset(torch.utils.data.Dataset):
         return normalized_image_array
     
     def __getitem__(self, idx):
-        train_img_idx = self.convert_index(idx)
-        image_info = self.load_image_info(train_img_idx)
+        # train_img_idx = self.convert_index(idx)
+        image_info = self.load_image_info(idx)
         img = self.load_image(image_info)
         img_arr = self.crop_img(img)
         norm_img = self.preprocess_image(img_arr)
@@ -128,8 +127,13 @@ class COCODataset(torch.utils.data.Dataset):
 
 if __name__ == "__main__":
     dataset = COCODataset()
-    img_dict = dataset[0]
-    print(img_dict)
+    x = dataset[0]
+    data_loader = torch.utils.data.DataLoader(dataset, batch_size = 4, shuffle = True)
+    for batch in data_loader:
+        print(batch.keys())
+        break
+    # img_dict = dataset[0]
+    # print(img_dict)
     
         
     
