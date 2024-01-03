@@ -1,8 +1,9 @@
 """
 #TODO:
--> Preprocessing
--> Fix Random caption
--> Fix variable length of list of labels
+-> Preprocessing: done
+-> Fix Random caption: done
+-> Fix variable length of list of labels: done
+-> Remove/Handle single channel images
 """
 import numpy as np
 import pandas as pd
@@ -52,6 +53,8 @@ class COCODataset(torch.utils.data.Dataset):
         
         self.metadata_df["image_captions"] = self.metadata_df["image_captions"].apply(convert_to_iter)
         self.metadata_df["labels"] = self.metadata_df["labels"].apply(convert_to_iter)
+        image_size_condition = (self.metadata_df["height"] >= 256) & (self.metadata_df["width"] >= 256)
+        self.metadata_df = self.metadata_df.loc[image_size_condition]
     
     def _limit_dataset(self):
         metadata_subset = self.metadata_df[self.metadata_df["labels"].apply(lambda x: len(x) >= self.min_classes)]
@@ -75,6 +78,9 @@ class COCODataset(torch.utils.data.Dataset):
         image_filename = image_info_dict["file_name"]
         file_path = os.path.join(self.images_dir, image_filename)
         img = Image.open(file_path)
+        num_channels = img.mode
+        if num_channels == "L":
+            img = img.convert("RGB")
         return img
     
     def __len__(self):
@@ -108,8 +114,7 @@ class COCODataset(torch.utils.data.Dataset):
         normalized_image_array = (img_arr / 255.0 - mean) / std
         return normalized_image_array
     
-    def __getitem__(self, idx):
-        # train_img_idx = self.convert_index(idx)
+    def __getitem__(self, idx):        
         image_info = self.load_image_info(idx)
         img = self.load_image(image_info)
         img_arr = self.crop_img(img)
@@ -126,12 +131,26 @@ class COCODataset(torch.utils.data.Dataset):
 
 
 if __name__ == "__main__":
+    from tqdm import tqdm
     dataset = COCODataset()
-    x = dataset[0]
-    data_loader = torch.utils.data.DataLoader(dataset, batch_size = 4, shuffle = True)
-    for batch in data_loader:
-        print(batch.keys())
-        break
+    x = dataset[70]
+    data_loader = torch.utils.data.DataLoader(dataset, batch_size = 16, shuffle = False)
+    image_size = []
+    for i, batch in enumerate(tqdm(data_loader)):
+        if list(batch["image"].size()) != [16, 3, 256, 256]:
+            print(f"Error in shape")
+        else:
+            image_size.append(batch["image"].shape)
+        
+    # caps = []
+    # c = 0
+    # for i, data in enumerate(tqdm(dataset)):
+    #     try:    
+    #         caps.append(data["caption"])
+    #     except Exception as e:
+    #         print(i)
+    #         # print(e)        
+    #     c+=1
     # img_dict = dataset[0]
     # print(img_dict)
     
